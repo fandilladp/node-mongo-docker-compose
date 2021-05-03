@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: "dockeryellow-ff01"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "dockeryellow-ff01"
+  template:
+    metadata:
+      labels:
+        app: "dockeryellow-ff01"
+    spec:
+      containers:
+        - name: "dockeryellow-ff01"
+          image: "docapp.azurecr.io/dockeryellow"
+          ports:
+          - containerPort: 3006

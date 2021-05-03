@@ -1,0 +1,50 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: docapp.azurecr.io
+        username: ${{ secrets.acr_docapp_username }}
+        password: ${{ secrets.acr_docapp_password }}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/" -f  "Dockerfile" -t docapp.azurecr.io/dockeryellow:${{ github.sha }} --label dockerfile-path=Dockerfile
+        docker push docapp.azurecr.io/dockeryellow:${{ github.sha }}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{ secrets.aks_dockeryellow_kubeConfig }}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep docker-yellow-api | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace docker-yellow-api`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: docker-yellow-api
+        container-registry-url: docapp.azurecr.io
+        container-registry-username: ${{ secrets.acr_docapp_username }}
+        container-registry-password: ${{ secrets.acr_docapp_password }}
+        secret-name: dockeryellowdockerauth
+       
+    - uses: azure/k8s-deploy@v1.2
+      with:
+        namespace: docker-yellow-api
+        manifests: |
+          manifests/deployment.yml
+          manifests/service.yml
+        images: |
+          docapp.azurecr.io/dockeryellow:${{ github.sha }}
+        imagepullsecrets: |
+          dockeryellowdockerauth

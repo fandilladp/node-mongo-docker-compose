@@ -1,7 +1,11 @@
 require('dotenv').config()
 const express = require('express');
 const bodyParser = require('body-parser');
-const app = express();
+var cors = require('cors')
+var app = express()
+ 
+app.use(cors())
+
 const port = process.env.APP_PORT || 3005;
 const { cat } = require('./mongo');
 
